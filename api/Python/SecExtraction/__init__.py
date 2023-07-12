@@ -492,8 +492,6 @@ def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
                 f"function {context.function_name} has been reached")
 
     try:
-        indexType = req.params.get('indexType')
-        indexNs = req.params.get('indexNs')
         body = json.dumps(req.get_json())
     except ValueError:
         return func.HttpResponse(
@@ -509,7 +507,7 @@ def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
 
         # Once we can get the Milvus index running in Azure, we can use this
 
-        result = ComposeResponse(indexType, indexNs, body)
+        result = ComposeResponse(body)
         return func.HttpResponse(result, mimetype="application/json")
     else:
         return func.HttpResponse(
@@ -517,7 +515,7 @@ def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
              status_code=400
         )
 
-def ComposeResponse(indexType, indexNs, jsonData):
+def ComposeResponse(jsonData):
     values = json.loads(jsonData)['values']
 
     logging.info("Calling Compose Response")
@@ -526,7 +524,7 @@ def ComposeResponse(indexType, indexNs, jsonData):
     results["values"] = []
 
     for value in values:
-        outputRecord = TransformValue(indexType, indexNs, value)
+        outputRecord = TransformValue(value)
         if outputRecord != None:
             results["values"].append(outputRecord)
     return json.dumps(results, ensure_ascii=False)
@@ -971,16 +969,8 @@ def downloadIndices(
 		else:
 			break
 		
-def EdgarIngestion(indexType, indexNs, value):
+def EdgarIngestion(value):
     try:
-        logging.info("Loading OpenAI")
-        openai.api_type = "azure"
-        openai.api_key = OpenAiKey
-        openai.api_version = OpenAiVersion
-        openai.api_base = f"https://{OpenAiService}.openai.azure.com"
-        uResultNs = uuid.uuid4()
-        logging.info("Index will be created as " + uResultNs.hex)
-
         """
         The main method iterates all over the tsv index files that are generated
         and calls a crawler method for each one of them.
@@ -1025,7 +1015,7 @@ def EdgarIngestion(indexType, indexNs, value):
                     tsv_filenames.append(filepath)
 
         logging.info(tsv_filenames)
-            # Get the indices that are specific to your needs
+        # Get the indices that are specific to your needs
         df = getSpecificIndicies(
                 tsv_filenames=tsv_filenames,
                 filing_types=config['filing_types'],
@@ -1090,9 +1080,9 @@ def EdgarIngestion(indexType, indexNs, value):
             logging.info("Extracted the data")
             jsonFileName = f'{series["filename"].split(".")[0]}.json'
             logging.info("Json file name is " + jsonFileName)
-            uploadBlob(OpenAiDocConnStr, SecDocContainer, jsonFileName, json.dumps(extractedItems), "application/json")
+            uploadBlob(OpenAiDocConnStr, SecDocContainer, series['CIK'] + '\\' + jsonFileName, json.dumps(extractedItems), "application/json")
             metadata = {'embedded': 'false'}
-            upsertMetadata(OpenAiDocConnStr, SecDocContainer, jsonFileName, metadata)
+            upsertMetadata(OpenAiDocConnStr, SecDocContainer, series['CIK'] + '\\' + jsonFileName, metadata)
             #extractedFilings.append(extractedItems)
 
         # extraction = ExtractItems(
@@ -1122,7 +1112,7 @@ def EdgarIngestion(indexType, indexNs, value):
             status_code=500
       )
 
-def TransformValue(indexType, indexNs, record):
+def TransformValue(record):
     logging.info("Calling Transform Value")
     try:
         recordId = record['recordId']
@@ -1158,7 +1148,7 @@ def TransformValue(indexType, indexNs, record):
         # Getting the items from the values/data/text
         value = data['text']
 
-        summaryResponse = EdgarIngestion(indexType, indexNs, value)
+        summaryResponse = EdgarIngestion(value)
         return ({
             "recordId": recordId,
             "data": {

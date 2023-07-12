@@ -324,14 +324,14 @@ def TaskAgentQaAnswer(question, overrides):
 
             llm = AzureChatOpenAI(
                 openai_api_base="https://{OpenAiService}.openai.azure.com",
-                openai_api_version="2023-03-15-preview",
+                openai_api_version=OpenAiVersion,
                 deployment_name=OpenAiChat,
                 temperature=0,
                 openai_api_key=OpenAiKey,
                 openai_api_type="azure",
                 max_tokens=1000)
 
-            embeddings = OpenAIEmbeddings(model=OpenAiEmbedding, chunk_size=1, openai_api_key=OpenAiKey)
+            embeddings = OpenAIEmbeddings(deployment=OpenAiEmbedding, chunk_size=1, openai_api_key=OpenAiKey)
             logging.info("Azure Open AI LLM Setup done")
         elif embeddingModelType == "openai":
             openai.api_type = "open_ai"

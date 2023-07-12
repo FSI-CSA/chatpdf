@@ -17,6 +17,8 @@ Before to jumping to the Azure OpenAI API, this guide will show how to have acce
 * [Azure Functions Core tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local#install-the-azure-functions-core-tools)
 * [Powershell 7+ (pwsh)](https://github.com/powershell/powershell) - For Windows users only. **Important**: Ensure you can run `pwsh.exe` from a PowerShell command. If this fails, you likely need to upgrade PowerShell.
 
+**Note** Pre-built docker Images are required only if you want to run the application in docker container.  You can skip this step if you want to run the application locally.  Do note that you need to provision all the services in Azure to run the application locally or in container.
+
 ### Pre-build docker Image - API
 
 Configure your `.env` as described in as described in [Configuration](Configuration.md).  You can alternatively, copy .dockerenv.example to .env from api\Python folder
@@ -73,15 +75,15 @@ Verify http://localhost:5000 to confirm the App is running locally.
    4. **NOTE** In case if you have [FTP disabled](./assets/DisabledFTP.png) due to policy on your subscription, you need to manually add following configuration and changes to YAML github action as deploy with Publish Profile will not work.
       1. Download Azure CLI from [here](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest), run az login to login with your Azure credentials.
       2. Select your subscription using az account set --subscription <subscription_name>
-      3. Create Azure app registration and grant contributor access to Function app using az ad sp create-for-rbac --name "chatpdf" --role contributor --scopes /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Web/sites/<function-app-name> --sdk-auth
+      3. Create Azure app registration and grant contributor access to Function app using az ad sp create-for-rbac --name "chatpdf" --role contributor --scopes /subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Web/sites/{function-app-name} --sdk-auth
          1. Replace {subscription-id}, {resource-group}, {app-name} and {function-app-name} with the names of your subscription, resource group, Web app and Azure function app.
-      4. Update Azure app registration and grant contributor access to Web app using az ad sp create-for-rbac --name "chatpdf" --role contributor --scopes /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Web/sites/<app-name> --sdk-auth
+      4. Update Azure app registration and grant contributor access to Web app using az ad sp create-for-rbac --name "chatpdf" --role contributor --scopes /subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Web/sites/{app-name} --sdk-auth
       5. The command should output a JSON object similar to this:
       6. {
-            "clientId": "<GUID>",
-            "clientSecret": "<GUID>",
-            "subscriptionId": "<GUID>",
-            "tenantId": "<GUID>",
+            "clientId": "{GUID}",
+            "clientSecret": "{GUID}",
+            "subscriptionId": "{GUID}",
+            "tenantId": "{GUID}",
             "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
             "resourceManagerEndpointUrl": "https://management.azure.com/",
             "activeDirectoryGraphResourceId": "https://graph.windows.net/",
