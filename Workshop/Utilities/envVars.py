@@ -8,10 +8,8 @@ load_dotenv(dotenv_path='./.env')
 try:
     OpenAiKey = os.getenv('OpenAiKey')
     OpenAiVersion = os.getenv('OpenAiVersion', "2023-05-15")
-    OpenAiDavinci = os.getenv('OpenAiDavinci')
     OpenAiChat = os.getenv('OpenAiChat')
-    OpenAiService = os.getenv('OpenAiService', '')
-    OpenAiBase = f"https://{OpenAiService}.openai.azure.com"
+    OpenAiEndPoint = os.getenv('OpenAiEndPoint', '')
     OpenAiDocStorName = os.getenv('OpenAiDocStorName')
     OpenAiDocStorKey = os.getenv('OpenAiDocStorKey')
     OpenAiDocConnStr = f"DefaultEndpointsProtocol=https;AccountName={OpenAiDocStorName};AccountKey={OpenAiDocStorKey};EndpointSuffix=core.windows.net"
@@ -21,6 +19,11 @@ try:
         OpenAiSummaryContainer = os.getenv('OpenAiSummaryContainer')
     else:
         OpenAiSummaryContainer = "summary"
+
+    if "OpenAiChat16k" in os.environ: 
+        OpenAiChat16k = os.getenv('OpenAiChat16k')
+    else:
+        OpenAiChat16k = "chat16k"
 
     if "SecDocContainer" in os.environ: 
         SecDocContainer = os.getenv('SecDocContainer')

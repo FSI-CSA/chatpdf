@@ -1,10 +1,13 @@
 import { useRef, useState, useEffect } from "react";
-import { Checkbox, ChoiceGroup, IChoiceGroupOption, Panel, DefaultButton, Spinner, TextField, SpinButton, Stack, IPivotItemProps, getFadedOverflowStyle} from "@fluentui/react";
+import { Checkbox, ChoiceGroup, IChoiceGroupOption, Panel, DefaultButton, Spinner, TextField, SpinButton, Stack, 
+    IPivotItemProps, getFadedOverflowStyle} from "@fluentui/react";
+import { ShieldLockRegular } from "@fluentui/react-icons";
 
 import styles from "./OneShot.module.css";
 import { Dropdown, DropdownMenuItemType, IDropdownStyles, IDropdownOption } from '@fluentui/react/lib/Dropdown';
 
-import { askApi, askAgentApi, askTaskAgentApi, Approaches, AskResponse, AskRequest, refreshIndex, getSpeechApi, summaryAndQa, refreshQuestions } from "../../api";
+import { askApi, askAgentApi, askTaskAgentApi, Approaches, AskResponse, AskRequest, refreshIndex, getSpeechApi, 
+    refreshQuestions, getUserInfo, SearchTypes } from "../../api";
 import { Answer, AnswerError } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
 import { AnalysisPanel, AnalysisPanelTabs } from "../../components/AnalysisPanel";
@@ -19,6 +22,7 @@ import { IStackStyles, IStackTokens, IStackItemStyles } from '@fluentui/react/li
 import { DefaultPalette } from '@fluentui/react/lib/Styling';
 import { DetailsList, DetailsListLayoutMode, SelectionMode, ConstrainMode } from '@fluentui/react/lib/DetailsList';
 import { mergeStyleSets } from '@fluentui/react/lib/Styling';
+import { update } from "@react-spring/web";
 
 var audio = new Audio();
 
@@ -26,6 +30,7 @@ const OneShot = () => {
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isQuestionPanelOpen, setIsQuestionPanelOpen] = useState(false);
     const [approach, setApproach] = useState<Approaches>(Approaches.RetrieveThenRead);
+    const [searchTypeOptions, setSearchTypeOptions] = useState<SearchTypes>(SearchTypes.Similarity);
     const [promptTemplate, setPromptTemplate] = useState<string>("");
     const [promptTemplatePrefix, setPromptTemplatePrefix] = useState<string>("");
     const [promptTemplateSuffix, setPromptTemplateSuffix] = useState<string>("");
@@ -36,8 +41,6 @@ const OneShot = () => {
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
     const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(true);
     const [useAutoSpeakAnswers, setUseAutoSpeakAnswers] = useState<boolean>(false);
-
-    const [lastHeader, setLastHeader] = useState<{ props: IPivotItemProps } | undefined>(undefined);
 
     const [options, setOptions] = useState<any>([])
     const [selectedItem, setSelectedItem] = useState<IDropdownOption>();
@@ -65,7 +68,7 @@ const OneShot = () => {
 
     //const [selectedIndex, setSelectedIndex] = useState<IDropdownOption>();
     const [selectedIndex, setSelectedIndex] = useState<string>();
-    const [indexMapping, setIndexMapping] = useState<{ key: string; iType: string;  summary:string; qa:string;}[]>();
+    const [indexMapping, setIndexMapping] = useState<{ key: string; iType: string;  summary:string; qa:string; chunkSize:string; chunkOverlap:string; promptType:string}[]>();
     const [exampleList, setExampleList] = useState<ExampleModel[]>([{text:'', value: ''}]);
     const [summary, setSummary] = useState<string>();
     const [agentSummary, setAgentSummary] = useState<string>();
@@ -87,6 +90,14 @@ const OneShot = () => {
     const [selectedTaskAgentIndexes, setSelectedTaskAgentIndexes] = useState<{ indexNs: string; indexName: any; returnDirect: string; }[]>([]);
     const [selectedEmbeddingItem, setSelectedEmbeddingItem] = useState<IDropdownOption>();
     const [questionList, setQuestionList] = useState<any[]>();
+    const [selectedChunkSize, setSelectedChunkSize] = useState<string>()
+    const [selectedChunkOverlap, setSelectedChunkOverlap] = useState<string>()
+    const [selectedPromptType, setSelectedPromptType] = useState<string>()
+    const [selectedDeploymentType, setSelectedDeploymentType] = useState<IDropdownOption>();
+    const [selectedPromptTypeItem, setSelectedPromptTypeItem] = useState<IDropdownOption>();
+    const [showAuthMessage, setShowAuthMessage] = useState<boolean>(false);
+
+    const dropdownShortStyles: Partial<IDropdownStyles> = { dropdown: { width: 110 } };
 
     const classNames = mergeStyleSets({
         header: {
@@ -124,6 +135,48 @@ const OneShot = () => {
         //   key: 'local',
         //   text: 'Local Embedding'
         // }
+    ]
+
+    const promptTypeOptions = [
+        {
+          key: 'generic',
+          text: 'generic'
+        },
+        {
+          key: 'medical',
+          text: 'medical'
+        },
+        {
+          key: 'financial',
+          text: 'financial'
+        },
+        {
+            key: 'financialtable',
+            text: 'financialtable'
+        },
+        {
+            key: 'prospectus',
+            text: 'prospectus'
+        },
+        {
+            key: 'productdocmd',
+            text: 'productdocmd'
+        },
+        {
+          key: 'insurance',
+          text: 'insurance'
+        }
+    ]
+
+    const deploymentTypeOptions = [
+        {
+          key: 'gpt35',
+          text: 'GPT 3.5 Turbo'
+        },
+        {
+          key: 'gpt3516k',
+          text: 'GPT 3.5 Turbo - 16k'
+        }
     ]
 
     const indexTypeOptions = [
@@ -174,6 +227,16 @@ const OneShot = () => {
         { key: 'refine', text: 'Refine'},
     ]
 
+    const getUserInfoList = async () => {
+        const userInfoList = await getUserInfo();
+        if (userInfoList.length === 0 && window.location.hostname !== "localhost") {
+            setShowAuthMessage(true);
+        }
+        else {
+            setShowAuthMessage(false);
+        }
+    }
+
     const refreshFilteredBlob = async(selectedIndex : string) => {
         const files = []
         const indexType = []
@@ -191,7 +254,10 @@ const OneShot = () => {
                     key:blob.namespace,
                     iType:blob.indexType,
                     summary:blob.summary,
-                    qa:blob.qa
+                    qa:blob.qa,
+                    chunkSize:blob.chunkSize,
+                    chunkOverlap:blob.chunkOverlap,
+                    promptType:blob.promptType
             })
           }
         }
@@ -269,7 +335,9 @@ const OneShot = () => {
                     tokenLength: tokenLength,
                     suggestFollowupQuestions: useSuggestFollowupQuestions,
                     autoSpeakAnswers: useAutoSpeakAnswers,
-                    embeddingModelType: String(selectedEmbeddingItem?.key)
+                    embeddingModelType: String(selectedEmbeddingItem?.key),
+                    deploymentType: String(selectedDeploymentType?.key),
+                    searchType: searchTypeOptions,
                 }
             };
             const result = await askApi(request, String(selectedItem?.key), String(selectedIndex), 'stuff');
@@ -312,10 +380,13 @@ const OneShot = () => {
                     tokenLength: tokenLength,
                     suggestFollowupQuestions: useSuggestFollowupQuestions,
                     autoSpeakAnswers: useAutoSpeakAnswers,
-                    embeddingModelType: String(selectedEmbeddingItem?.key)
+                    embeddingModelType: String(selectedEmbeddingItem?.key),
+                    deploymentType: String(selectedDeploymentType?.key),
+                    searchType: searchTypeOptions,
                 }
             };
             const result = await askAgentApi(request);
+            console.log(result);
             //setAgentAnswer(result);
             setAgentAnswer([result, null]);
             if(useAutoSpeakAnswers) {
@@ -355,7 +426,9 @@ const OneShot = () => {
                     tokenLength: tokenLength,
                     suggestFollowupQuestions: useSuggestFollowupQuestions,
                     autoSpeakAnswers: useAutoSpeakAnswers,
-                    embeddingModelType: String(selectedEmbeddingItem?.key)
+                    embeddingModelType: String(selectedEmbeddingItem?.key),
+                    deploymentType: String(selectedDeploymentType?.key),
+                    searchType: searchTypeOptions,
                 }
             };
             const result = await askTaskAgentApi(request);
@@ -409,7 +482,14 @@ const OneShot = () => {
     };
 
     const onEmbeddingChange = (event?: React.FormEvent<HTMLDivElement>, item?: IDropdownOption): void => {
+        if (item?.key === "openai") {
+            setSelectedDeploymentType(deploymentTypeOptions[0]);
+        }
         setSelectedEmbeddingItem(item);
+    };
+
+    const onDeploymentTypeChange = (event?: React.FormEvent<HTMLDivElement>, item?: IDropdownOption): void => {
+        setSelectedDeploymentType(item);
     };
 
     const stopSynthesis = () => {
@@ -429,14 +509,6 @@ const OneShot = () => {
         setUseSuggestFollowupQuestions(!!checked);
     };
 
-    const onPromptTemplatePrefixChange = (_ev?: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string) => {
-        setPromptTemplatePrefix(newValue || "");
-    };
-
-    const onPromptTemplateSuffixChange = (_ev?: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string) => {
-        setPromptTemplateSuffix(newValue || "");
-    };
-
     const onRetrieveCountChange = (_ev?: React.SyntheticEvent<HTMLElement, Event>, newValue?: string) => {
         setRetrieveCount(parseInt(newValue || "3"));
     };
@@ -453,12 +525,8 @@ const OneShot = () => {
         setApproach((option?.key as Approaches) || Approaches.RetrieveThenRead);
     };
 
-    const onUseSemanticRankerChange = (_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, checked?: boolean) => {
-        setUseSemanticRanker(!!checked);
-    };
-
-    const onUseSemanticCaptionsChange = (_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, checked?: boolean) => {
-        setUseSemanticCaptions(!!checked);
+    const onSearchTypeChange = (_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, option?: IChoiceGroupOption) => {
+        setSearchTypeOptions((option?.key as SearchTypes) || SearchTypes.Similarity);
     };
 
     const onExampleClicked = (example: string) => {
@@ -486,12 +554,17 @@ const OneShot = () => {
         }
     };
 
+    const onPromptTypeChange = (event?: React.FormEvent<HTMLDivElement>, item?: IDropdownOption): void => {
+        setSelectedPromptTypeItem(item);
+        updatePrompt(String(item?.key));
+    };
+
     const refreshBlob = async () => {
         const files = []
         const indexType = []
     
         //const blobs = containerClient.listBlobsFlat(listOptions)
-        const blobs = await refreshIndex()       
+        const blobs = await refreshIndex()
         for (const blob of blobs.values) {
           if (blob.embedded == "true")
           {
@@ -503,7 +576,10 @@ const OneShot = () => {
                     key:blob.namespace,
                     iType:blob.indexType,
                     summary:blob.summary,
-                    qa:blob.qa == null ? '' : blob.qa
+                    qa:blob.qa == null ? '' : blob.qa,
+                    chunkSize:blob.chunkSize,
+                    chunkOverlap:blob.chunkOverlap,
+                    promptType:blob.promptType
             })
           }
         }
@@ -520,14 +596,25 @@ const OneShot = () => {
                 setSelectedIndex(item.iType)
                 setSummary(item.summary)
                 setQa(item.qa)
+                setSelectedChunkOverlap(item.chunkOverlap)
+                setSelectedChunkSize(item.chunkSize)
+                setSelectedPromptType(item.promptType)
+                setSelectedPromptTypeItem(promptTypeOptions.find(x => x.key === item.promptType))
+                updatePrompt(item.promptType)
+
+                if (Number(item.chunkSize) > 4000) {
+                    setSelectedDeploymentType(deploymentTypeOptions[1])
+                } else {
+                    setSelectedDeploymentType(deploymentTypeOptions[0])
+                }
 
                 const sampleQuestion = []
                 const  questionList = item.qa.split("\\n")
                 for (const item of questionList) {
                     if ((item != '')) {
                         sampleQuestion.push({
-                            text: item.replace(/[0-9]./g, ''),
-                            value: item.replace(/[0-9]./g, ''),
+                            text: item.replace(/^\d+\.\s*/, '').replace('<', '').replace('>', ''),
+                            value: item.replace(/^\d+\.\s*/, '').replace('<', '').replace('>', ''),
                         })
                     } 
                 }
@@ -561,25 +648,96 @@ const OneShot = () => {
         setQuestionList(sampleQuestionList)
     }
 
-    // const refreshQuestionsList = async (indexType:string, indexName:string) => {
-    //     const questionList = await  refreshQuestions(indexType, indexName)
-        
-    //     const sampleQuestionList = []
-    //     for (const question of questionList.values) {
-    //         sampleQuestionList.push({
-    //             question: question.question,
-    //         });    
-    //     }
-    //     setQuestionList(sampleQuestionList)
-    // }
+    const updatePrompt = (promptType: string) => {
+        const genericPrompt = `Given the following extracted parts of a long document and a question, create a final answer. 
+        If you don't know the answer, just say that you don't know. Don't try to make up an answer. 
+        If the answer is not contained within the text below, say \"I don't know\".
 
-    const refreshSummary = async (requestType : string) => {
-        try {
-            const result = await summaryAndQa(String(selectedIndex), String(selectedItem?.key), String(selectedEmbeddingItem?.key), 
-            requestType, 'stuff');
-            refreshBlob();
-        } catch (e) {
-        } finally {
+        {summaries}
+        Question: {question}
+        `
+
+        const medicalPrompt = `You are an AI assistant tasked with answering questions and summarizing information from medical records documents. 
+        Your answer should accurately capture the key information in the document while avoiding the omission of any domain-specific words. 
+        Please generate a concise and comprehensive information that includes details such as patient information, medical history, 
+        allergies, chronic conditions, previous surgeries, prescribed medications, and upcoming appointments. 
+        Ensure that it is easy to understand for healthcare professionals and provides an accurate representation of the patient's medical history 
+        and current health status. 
+        
+        Begin with a brief introduction of the patient, followed by the main points of their medical records.
+        Please remember to use clear language and maintain the integrity of the original information without missing any important details
+        {summaries}
+        Question: {question}
+        `
+
+        const financialPrompt = `You are an AI assistant tasked with answering questions and summarizing information from 
+        earning call transcripts, annual reports, SEC filings and financial statements.
+        Your answer should accurately capture the key information in the document while avoiding the omission of any domain-specific words. 
+        Please generate a concise and comprehensive information that includes details such as reporting year and amount in millions.
+        Ensure that it is easy to understand for business professionals and provides an accurate representation of the financial statement history. 
+        
+        Please remember to use clear language and maintain the integrity of the original information without missing any important details
+
+        QUESTION: {question}
+        =========
+        {summaries}
+        =========
+        `
+
+        const financialTablePrompt = `You are an AI assistant tasked with answering questions and summarizing information from 
+        financial statements like income statement, cashflow and balance sheets. 
+        Additionally you may also be asked to answer questions about financial ratios and other financial metrics.
+        The data that you are presented will be in table format or structure.
+        Your answer should accurately capture the key information in the document while avoiding the omission of any domain-specific words. 
+        Please generate a concise and comprehensive information that includes details such as reporting year and amount in millions.
+        Ensure that it is easy to understand for business professionals and provides an accurate representation of the financial statement history. 
+        
+        Please remember to use clear language and maintain the integrity of the original information without missing any important details
+
+        QUESTION: {question}
+        =========
+        {summaries}
+        =========
+        `
+
+        const prospectusPrompt = `"""You are an AI assistant tasked with summarizing documents from large documents that contains information about Initial Public Offerings. 
+        IPO document contains sections with information about the company, its business, strategies, risk, management structure, financial, and other information.
+        Your summary should accurately capture the key information in the document while avoiding the omission of any domain-specific words. 
+        Please remember to use clear language and maintain the integrity of the original information without missing any important details:
+        QUESTION: {question}
+        =========
+        {summaries}
+        =========
+
+        """`
+
+        const productDocMdPrompt = `"""You are an AI assistant tasked with answering questions and summarizing information for 
+        product or service from documentations and knowledge base.
+        Your answer should accurately capture the key information in the document while avoiding the omission of any domain-specific words. 
+        Please generate a concise and comprehensive information that includes details about the product or service.
+        Please remember to use clear language and maintain the integrity of the original information without missing any important details
+        QUESTION: {question}
+        =========
+        {summaries}
+        =========
+
+        """`
+
+        if (promptType == "generic") {
+            setPromptTemplate(genericPrompt)
+        }
+        else if (promptType == "medical") {
+            setPromptTemplate(medicalPrompt)
+        } else if (promptType == "financial") {
+            setPromptTemplate(financialPrompt)
+        } else if (promptType == "financialtable") {
+            setPromptTemplate(financialTablePrompt)
+        } else if (promptType == "prospectus") {
+            setPromptTemplate(prospectusPrompt)
+        } else if (promptType == "productdocmd") {
+            setPromptTemplate(productDocMdPrompt)
+        } else if (promptType == "custom") {
+            setPromptTemplate("")
         }
     }
 
@@ -590,25 +748,33 @@ const OneShot = () => {
         indexMapping?.findIndex((item) => {
             if (item.key == defaultKey) {
                 setSelectedIndex(item.iType)
+                setSelectedChunkSize(item.chunkSize)
+                setSelectedChunkOverlap(item.chunkOverlap)
+                setSelectedPromptType(item.promptType)
+                setSelectedPromptTypeItem(promptTypeOptions.find(x => x.key === item.promptType))
                 setSummary(item.summary)
                 setQa(item.qa)
+                updatePrompt(item.promptType)
 
+                if (Number(item.chunkSize) > 4000) {
+                    setSelectedDeploymentType(deploymentTypeOptions[1])
+                } else {
+                    setSelectedDeploymentType(deploymentTypeOptions[0])
+                }
                 const sampleQuestion = []
 
                 const  questionList = item.qa.split("\\n")
                 for (const item of questionList) {
                     if ((item != '')) {
                         sampleQuestion.push({
-                            text: item.replace(/[0-9]./g, ''),
-                            value: item.replace(/[0-9]./g, ''),
+                            text: item.replace(/^\d+\.\s*/, '').replace('<', '').replace('>', ''),  //item.replace(/[0-9]./g, ''),
+                            value: item.replace(/^\d+\.\s*/, '').replace('<', '').replace('>', '') //item.replace(/[0-9]./g, ''),
                         })
                     } 
                 }
                 const generatedExamples: ExampleModel[] = sampleQuestion
                 setExampleList(generatedExamples)
                 setExampleLoading(false)
-
-                //refreshQuestionsList(item.iType, item.key)
             }
         })
     };
@@ -636,18 +802,40 @@ const OneShot = () => {
     };
 
     useEffect(() => {
+        if (window.location.hostname != "localhost") {
+            getUserInfoList();
+            setShowAuthMessage(true)
+        } else
+            setShowAuthMessage(false)
+
         refreshBlob()
         setChainTypeOptions(chainType)
         setSelectedChain(chainType[0])
         setSelectedindexTypeItem(indexTypeOptions[0])
         refreshFilteredBlob(indexTypeOptions[0].key)
         setSelectedEmbeddingItem(embeddingOptions[0])
+        setSelectedDeploymentType(deploymentTypeOptions[0])
     }, [])
 
     const approaches: IChoiceGroupOption[] = [
         {
             key: Approaches.RetrieveThenRead,
             text: "Retrieve-Then-Read"
+        }
+    ];
+
+    const searchTypes: IChoiceGroupOption[] = [
+        {
+            key: SearchTypes.Similarity,
+            text: "Similarity"
+        },
+        {
+            key: SearchTypes.Hybrid,
+            text: "Hybrid"
+        },
+        {
+            key: SearchTypes.HybridReRank,
+            text: "Hybrid with ReRank"
         }
     ];
 
@@ -687,8 +875,21 @@ const OneShot = () => {
     };
 
     return (
-
         <div className={styles.root}>
+            {showAuthMessage ? (
+                <Stack className={styles.chatEmptyState}>
+                    <ShieldLockRegular className={styles.chatIcon} style={{color: 'darkorange', height: "200px", width: "200px"}}/>
+                    <h1 className={styles.chatEmptyStateTitle}>Authentication Not Configured</h1>
+                    <h2 className={styles.chatEmptyStateSubtitle}>
+                        This app does not have authentication configured. Please add an identity provider by finding your app in the 
+                        <a href="https://portal.azure.com/" target="_blank"> Azure Portal </a>
+                        and following 
+                         <a href="https://learn.microsoft.com/en-us/azure/app-service/scenario-secure-app-authentication-app-service#3-configure-authentication-and-authorization" target="_blank"> these instructions</a>.
+                    </h2>
+                    <h2 className={styles.chatEmptyStateSubtitle} style={{fontSize: "20px"}}><strong>Authentication configuration takes a few minutes to apply. </strong></h2>
+                    <h2 className={styles.chatEmptyStateSubtitle} style={{fontSize: "20px"}}><strong>If you deployed in the last 10 minutes, please wait and reload the page after 10 minutes.</strong></h2>
+                </Stack>
+            ) : (
             <div className={styles.oneshotContainer}>
             <Pivot aria-label="QA" onLinkClick={onTabChange}>
                     <PivotItem
@@ -815,63 +1016,60 @@ const OneShot = () => {
                                         styles={dropdownStyles}
                                     />
                                     <Label className={styles.commandsContainer}>Index Type : {selectedIndex}</Label>
+                                    <Label className={styles.commandsContainer}>Chunk Size : {selectedChunkSize} / Chunk Overlap : {selectedChunkOverlap}</Label>
                                 </div>
-                                <br/>
                                 <div>
                                     <Label>LLM Model</Label>
                                     <Dropdown
                                         selectedKey={selectedEmbeddingItem ? selectedEmbeddingItem.key : undefined}
                                         onChange={onEmbeddingChange}
-                                        defaultSelectedKey="azureopenai"
                                         placeholder="Select an LLM Model"
                                         options={embeddingOptions}
                                         disabled={false}
                                         styles={dropdownStyles}
                                     />
                                 </div>
-                                <ChoiceGroup
-                                    className={styles.oneshotSettingsSeparator}
-                                    label="Approach"
-                                    options={approaches}
-                                    defaultSelectedKey={approach}
-                                    onChange={onApproachChange}
-                                />
-
-                                {(approach === Approaches.RetrieveThenRead || approach === Approaches.ReadDecomposeAsk) && (
+                                <div>
+                                    <Label>Deployment Type</Label>
+                                    <Dropdown
+                                            selectedKey={selectedDeploymentType ? selectedDeploymentType.key : undefined}
+                                            onChange={onDeploymentTypeChange}
+                                            placeholder="Select an Deployment Type"
+                                            options={deploymentTypeOptions}
+                                            disabled={((selectedEmbeddingItem?.key == "openai" ? true : false) || (Number(selectedChunkSize) > 4000 ? true : false))}
+                                            styles={dropdownStyles}
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Prompt Type</Label>
+                                    <Dropdown
+                                            selectedKey={selectedPromptTypeItem ? selectedPromptTypeItem.key : undefined}
+                                            onChange={onPromptTypeChange}
+                                            placeholder="Prompt Type"
+                                            options={promptTypeOptions}
+                                            disabled={false}
+                                            styles={dropdownStyles}
+                                    />
                                     <TextField
                                         className={styles.oneshotSettingsSeparator}
-                                        defaultValue={promptTemplate}
+                                        value={promptTemplate}
                                         label="Override prompt template"
                                         multiline
                                         autoAdjustHeight
                                         onChange={onPromptTemplateChange}
                                     />
-                                )}
-
-                                {approach === Approaches.ReadRetrieveRead && (
-                                    <>
-                                        <TextField
-                                            className={styles.oneshotSettingsSeparator}
-                                            defaultValue={promptTemplatePrefix}
-                                            label="Override prompt prefix template"
-                                            multiline
-                                            autoAdjustHeight
-                                            onChange={onPromptTemplatePrefixChange}
-                                        />
-                                        <TextField
-                                            className={styles.oneshotSettingsSeparator}
-                                            defaultValue={promptTemplateSuffix}
-                                            label="Override prompt suffix template"
-                                            multiline
-                                            autoAdjustHeight
-                                            onChange={onPromptTemplateSuffixChange}
-                                        />
-                                    </>
-                                )}
+                                </div>
+                                <ChoiceGroup
+                                    className={styles.oneshotSettingsSeparator}
+                                    label="Search Type"
+                                    options={searchTypes}
+                                    defaultSelectedKey={searchTypeOptions}
+                                    onChange={onSearchTypeChange}
+                                />
 
                                 <SpinButton
                                     className={styles.oneshotSettingsSeparator}
-                                    label="Retrieve this many documents from search:"
+                                    label="Document to Retrieve from search:"
                                     min={1}
                                     max={7}
                                     defaultValue={retrieveCount.toString()}
@@ -983,7 +1181,7 @@ const OneShot = () => {
                                         placeholder="Ask me anything"
                                         disabled={isLoading}
                                         updateQuestion={lastAgentQuestionRef.current}
-                                        onSend={question => makeApiAgentRequest(question)}
+                                        onSend={(question: string) => makeApiAgentRequest(question)}
                                     />
                                 </div>
                                 <div className={styles.chatContainer}>
@@ -999,10 +1197,10 @@ const OneShot = () => {
                                                     //answer={answerAgent}
                                                     answer={answerAgent[0]}
                                                     isSpeaking = {isSpeaking}
-                                                    onCitationClicked={x => onShowCitation(x)}
+                                                    onCitationClicked={(x: string) => onShowCitation(x)}
                                                     onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab)}
                                                     onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab)}
-                                                    onFollowupQuestionClicked={q => makeApiAgentRequest(q)}
+                                                    onFollowupQuestionClicked={(q: string) => makeApiAgentRequest(q)}
                                                     showFollowupQuestions={useSuggestFollowupQuestions}
                                                     onSpeechSynthesisClicked={() => isSpeaking? stopSynthesis(): startSynthesis("AnswerAgent", answerAgent[1])}
                                                 />
@@ -1019,7 +1217,7 @@ const OneShot = () => {
                                     <AnalysisPanel
                                         className={styles.oneshotAnalysisPanel}
                                         activeCitation={activeCitation}
-                                        onActiveTabChanged={x => onToggleTab(x)}
+                                        onActiveTabChanged={(x: any) => onToggleTab(x)}
                                         citationHeight="600px"
                                         //answer={answerAgent}
                                         answer={answerAgent[0]}
@@ -1075,8 +1273,8 @@ const OneShot = () => {
                                     onChange={onEnableAutoSpeakAnswersChange}
                                 />
                             </Panel>
-                        </PivotItem>
-                        <PivotItem
+                    </PivotItem>
+                    <PivotItem
                         headerText="Task Agent QA"
                         headerButtonProps={{
                         'data-order': 2,
@@ -1139,7 +1337,7 @@ const OneShot = () => {
                                         placeholder="Ask me anything"
                                         disabled={isLoading}
                                         updateQuestion={lastTaskAgentQuestionRef.current}
-                                        onSend={question => makeApiTaskAgentRequest(question)}
+                                        onSend={(question: string) => makeApiTaskAgentRequest(question)}
                                     />
                                 </div>
                                 <div className={styles.chatContainer}>
@@ -1154,10 +1352,10 @@ const OneShot = () => {
                                                 <Answer
                                                     answer={answerTaskAgent[0]}
                                                     isSpeaking = {isSpeaking}
-                                                    onCitationClicked={x => onShowCitation(x)}
+                                                    onCitationClicked={(x: string) => onShowCitation(x)}
                                                     onThoughtProcessClicked={() => onToggleTab(AnalysisPanelTabs.ThoughtProcessTab)}
                                                     onSupportingContentClicked={() => onToggleTab(AnalysisPanelTabs.SupportingContentTab)}
-                                                    onFollowupQuestionClicked={q => makeApiTaskAgentRequest(q)}
+                                                    onFollowupQuestionClicked={(q: string) => makeApiTaskAgentRequest(q)}
                                                     showFollowupQuestions={useSuggestFollowupQuestions}
                                                     onSpeechSynthesisClicked={() => isSpeaking? stopSynthesis(): startSynthesis("AnswerTaskAgent", answerTaskAgent[1])}
                                                 />
@@ -1174,7 +1372,7 @@ const OneShot = () => {
                                     <AnalysisPanel
                                         className={styles.oneshotAnalysisPanel}
                                         activeCitation={activeCitation}
-                                        onActiveTabChanged={x => onToggleTab(x)}
+                                        onActiveTabChanged={(x: any) => onToggleTab(x)}
                                         citationHeight="600px"
                                         answer={answerTaskAgent[0]}
                                         activeTab={activeAnalysisPanelTab}
@@ -1237,9 +1435,10 @@ const OneShot = () => {
                                     onChange={onEnableAutoSpeakAnswersChange}
                                 />
                             </Panel>
-                        </PivotItem>
+                    </PivotItem>
                 </Pivot>
             </div>
+            )}
         </div>
     );
 };

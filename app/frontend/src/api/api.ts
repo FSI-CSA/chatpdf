@@ -1,12 +1,125 @@
 import { AskRequest, AskResponse, ChatRequest, ChatResponse, SpeechTokenResponse, SqlResponse,
-  EvalResponse } from "./models";
-import { PineconeStore } from "langchain/vectorstores";
-import { OpenAIEmbeddings } from 'langchain/embeddings'
-import { PineconeClient } from "@pinecone-database/pinecone";
-import { ChatVectorDBQAChain } from 'langchain/chains'
-import { OpenAI } from 'langchain/llms'
+  EvalResponse, UserInfo} from "./models";
 import { Any } from "@react-spring/web";
 
+export async function getUserInfo(): Promise<UserInfo[]> {
+  const response = await fetch('/.auth/me');
+  if (!response.ok) {
+      console.log("No identity provider found. Access to chat will be blocked.")
+      return [];
+  }
+
+  const payload = await response.json();
+  return payload;
+}
+export async function getNews(symbol: string): Promise<Any> {
+  const response = await fetch('/getNews', {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        symbol: symbol,
+          postBody: {
+            values: [
+              {
+                recordId: 0,
+                data: {
+                  text: '',
+                  }
+              }
+            ]
+          }
+      })
+  });
+
+  const parsedResponse: Any = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse
+}
+export async function getSocialSentiment(symbol: string): Promise<Any> {
+  const response = await fetch('/getSocialSentiment', {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        symbol: symbol,
+          postBody: {
+            values: [
+              {
+                recordId: 0,
+                data: {
+                  text: '',
+                  }
+              }
+            ]
+          }
+      })
+  });
+
+  const parsedResponse: Any = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse
+}
+export async function getIncomeStatement(symbol: string): Promise<Any> {
+  const response = await fetch('/getIncomeStatement', {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        symbol: symbol,
+          postBody: {
+            values: [
+              {
+                recordId: 0,
+                data: {
+                  text: '',
+                  }
+              }
+            ]
+          }
+      })
+  });
+
+  const parsedResponse: Any = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse
+}
+export async function getCashFlow(symbol: string): Promise<Any> {
+  const response = await fetch('/getCashFlow', {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        symbol: symbol,
+          postBody: {
+            values: [
+              {
+                recordId: 0,
+                data: {
+                  text: '',
+                  }
+              }
+            ]
+          }
+      })
+  });
+
+  const parsedResponse: Any = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse
+}
 export async function askApi(options: AskRequest, indexNs: string, indexType: string, chainType : string): Promise<AskResponse> {
     const response = await fetch('/ask', {
         method: "POST",
@@ -30,13 +143,13 @@ export async function askApi(options: AskRequest, indexNs: string, indexType: st
                         semantic_captions: options.overrides?.semanticCaptions,
                         top: options.overrides?.top,
                         temperature: options.overrides?.temperature,
-                        prompt_template: options.overrides?.promptTemplate,
-                        prompt_template_prefix: options.overrides?.promptTemplatePrefix,
-                        prompt_template_suffix: options.overrides?.promptTemplateSuffix,
+                        promptTemplate: options.overrides?.promptTemplate,
                         exclude_category: options.overrides?.excludeCategory,
                         chainType: options.overrides?.chainType,
                         tokenLength: options.overrides?.tokenLength,
                         embeddingModelType: options.overrides?.embeddingModelType,
+                        deploymentType: options.overrides?.deploymentType,
+                        searchType: options.overrides?.searchType,
                     }
                   }
                 }
@@ -51,6 +164,35 @@ export async function askApi(options: AskRequest, indexNs: string, indexType: st
     }
     return parsedResponse.values[0].data
 
+}
+export async function getPib(step: string, symbol: string, embeddingModelType: string): Promise<AskResponse> {
+  const response = await fetch('/getPib', {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        step: step,
+        symbol: symbol,
+        embeddingModelType:embeddingModelType,
+        postBody: {
+          values: [
+            {
+              recordId: 0,
+              data: {
+                text: '',
+              }
+            }
+          ]
+        }
+      })
+  });
+
+  const parsedResponse: ChatResponse = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse.values[0].data
 }
 export async function promptGuru(task: string, modelName:string, embeddingModelType: string): Promise<AskResponse> {
   const response = await fetch('/promptGuru', {
@@ -100,17 +242,14 @@ export async function askAgentApi(options: AskRequest): Promise<AskResponse> {
                   overrides: {
                       indexType: options.overrides?.indexType,
                       indexes: options.overrides?.indexes,
-                      semantic_ranker: options.overrides?.semanticRanker,
-                      semantic_captions: options.overrides?.semanticCaptions,
                       top: options.overrides?.top,
                       temperature: options.overrides?.temperature,
-                      prompt_template: options.overrides?.promptTemplate,
-                      prompt_template_prefix: options.overrides?.promptTemplatePrefix,
-                      prompt_template_suffix: options.overrides?.promptTemplateSuffix,
+                      promptTemplate: options.overrides?.promptTemplate,
                       exclude_category: options.overrides?.excludeCategory,
                       chainType: options.overrides?.chainType,
                       tokenLength: options.overrides?.tokenLength,
                       embeddingModelType: options.overrides?.embeddingModelType,
+                      searchType: options.overrides?.searchType,
                   }
                 }
               }
@@ -191,6 +330,7 @@ export async function askTaskAgentApi(options: AskRequest): Promise<AskResponse>
                       chainType: options.overrides?.chainType,
                       tokenLength: options.overrides?.tokenLength,
                       embeddingModelType: options.overrides?.embeddingModelType,
+                      searchType: options.overrides?.searchType,
                   }
                 }
               }
@@ -206,7 +346,7 @@ export async function askTaskAgentApi(options: AskRequest): Promise<AskResponse>
   return parsedResponse.values[0].data
 
 }
-export async function chatGptApi(options: ChatRequest, indexNs: string, indexType:string): Promise<AskResponse> {
+export async function chat(options: ChatRequest, indexNs: string, indexType:string): Promise<AskResponse> {
     const response = await fetch('/chat' , {
         method: "POST",
         headers: {
@@ -223,18 +363,16 @@ export async function chatGptApi(options: ChatRequest, indexNs: string, indexTyp
                   history: options.history,
                   approach: 'rrr',
                   overrides: {
-                    semantic_ranker: options.overrides?.semanticRanker,
-                    semantic_captions: options.overrides?.semanticCaptions,
                     top: options.overrides?.top,
                     temperature: options.overrides?.temperature,
-                    prompt_template: options.overrides?.promptTemplate,
-                    prompt_template_prefix: options.overrides?.promptTemplatePrefix,
-                    prompt_template_suffix: options.overrides?.promptTemplateSuffix,
+                    promptTemplate: options.overrides?.promptTemplate,
                     suggest_followup_questions: options.overrides?.suggestFollowupQuestions,
                     embeddingModelType: options.overrides?.embeddingModelType,
                     firstSession:options.overrides?.firstSession,
                     session:options.overrides?.session,
                     sessionId:options.overrides?.sessionId,
+                    deploymentType: options.overrides?.deploymentType,
+                    chainType: options.overrides?.chainType,
                   }
                 }
               }
@@ -249,6 +387,144 @@ export async function chatGptApi(options: ChatRequest, indexNs: string, indexTyp
     }
     return parsedResponse.values[0].data;
 }
+export async function chatStream(options: ChatRequest, indexNs: string, indexType:string): Promise<Response> {
+    return await fetch('/chatStream' , {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        indexType:indexType,
+        indexNs: indexNs,
+        postBody: {
+          values: [
+            {
+              recordId: 0,
+              data: {
+                history: options.history,
+                approach: 'rrr',
+                overrides: {
+                  top: options.overrides?.top,
+                  temperature: options.overrides?.temperature,
+                  promptTemplate: options.overrides?.promptTemplate,
+                  suggest_followup_questions: options.overrides?.suggestFollowupQuestions,
+                  embeddingModelType: options.overrides?.embeddingModelType,
+                  firstSession:options.overrides?.firstSession,
+                  session:options.overrides?.session,
+                  sessionId:options.overrides?.sessionId,
+                  deploymentType: options.overrides?.deploymentType,
+                  chainType: options.overrides?.chainType,
+                }
+              }
+            }
+          ]
+        }
+      })
+  });
+}
+export async function chatGpt(options: ChatRequest, indexNs: string, indexType:string): Promise<AskResponse> {
+  const response = await fetch('/chatGpt' , {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        indexType:indexType,
+        indexNs: indexNs,
+        postBody: {
+          values: [
+            {
+              recordId: 0,
+              data: {
+                history: options.history,
+                approach: 'rrr',
+                overrides: {
+                  temperature: options.overrides?.temperature,
+                  tokenLength: options.overrides?.tokenLength,
+                  promptTemplate: options.overrides?.promptTemplate,
+                  embeddingModelType: options.overrides?.embeddingModelType,
+                  firstSession:options.overrides?.firstSession,
+                  session:options.overrides?.session,
+                  sessionId:options.overrides?.sessionId,
+                  deploymentType: options.overrides?.deploymentType,
+                  functionCall: options.overrides?.functionCall,
+                }
+              }
+            }
+          ]
+        }
+      })
+  });
+
+  const parsedResponse: ChatResponse = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error(parsedResponse.values[0].data.error || "Unknown error");
+  }
+  return parsedResponse.values[0].data;
+}
+export async function pibChatGptApi(options: ChatRequest, symbol: string, indexName: string): Promise<AskResponse> {
+  const response = await fetch('/pibChat' , {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        symbol:symbol,
+        indexName: indexName,
+        postBody: {
+          values: [
+            {
+              recordId: 0,
+              data: {
+                text: '',
+                history: options.history,
+                approach: 'rrr',
+                overrides: {
+                  top: options.overrides?.top,
+                  temperature: options.overrides?.temperature,
+                  promptTemplate: options.overrides?.promptTemplate,
+                  suggest_followup_questions: options.overrides?.suggestFollowupQuestions,
+                  embeddingModelType: options.overrides?.embeddingModelType,
+                  firstSession:options.overrides?.firstSession,
+                  session:options.overrides?.session,
+                  sessionId:options.overrides?.sessionId,
+                  deploymentType: options.overrides?.deploymentType,
+                  chainType: options.overrides?.chainType,
+                }
+              }
+            }
+          ]
+        }
+      })
+  });
+
+  const parsedResponse: ChatResponse = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error(parsedResponse.values[0].data.error || "Unknown error");
+  }
+  return parsedResponse.values[0].data;
+}
+
+export async function getAllSessions(indexType:string, feature:string, type:string): Promise<Any> {
+  const response = await fetch('/getAllSessions' , {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        indexType:indexType,
+        feature:feature,
+        type:type,
+      })
+  });
+
+  const parsedResponse: Any = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse;
+}
+
 export async function getAllIndexSessions(indexNs: string, indexType:string, feature:string, type:string): Promise<Any> {
   const response = await fetch('/getAllIndexSessions' , {
       method: "POST",
@@ -309,6 +585,20 @@ export async function deleteIndexSession(indexNs: string, indexType:string, sess
 }
 export async function getDocumentList(): Promise<Any> {
   const response = await fetch('/getDocumentList' , {
+      method: "GET",
+      headers: {
+          "Content-Type": "application/json"
+      },
+  });
+
+  const parsedResponse: any = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse;
+}
+export async function getProspectusList(): Promise<Any> {
+  const response = await fetch('/getProspectusList' , {
       method: "GET",
       headers: {
           "Content-Type": "application/json"
@@ -407,47 +697,6 @@ export async function getIndexSessionDetail(sessionId: string): Promise<Any> {
       throw Error("Unknown error");
   }
   return parsedResponse;
-}
-export async function chatGpt3Api(question: string, options: ChatRequest, indexNs: string, indexType:string): Promise<AskResponse> {
-  const response = await fetch('/chat3', {
-      method: "POST",
-      headers: {
-          "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        indexType:indexType,
-        indexNs: indexNs,
-        question:question,
-        postBody: {
-          values: [
-            {
-              recordId: 0,
-              data: {
-                history: options.history,
-                approach: 'rrr',
-                overrides: {
-                  semantic_ranker: options.overrides?.semanticRanker,
-                  semantic_captions: options.overrides?.semanticCaptions,
-                  top: options.overrides?.top,
-                  temperature: options.overrides?.temperature,
-                  prompt_template: options.overrides?.promptTemplate,
-                  prompt_template_prefix: options.overrides?.promptTemplatePrefix,
-                  prompt_template_suffix: options.overrides?.promptTemplateSuffix,
-                  suggest_followup_questions: options.overrides?.suggestFollowupQuestions,
-                  embeddingModelType: options.overrides?.embeddingModelType,
-                }
-              }
-            }
-          ]
-        }
-      })
-  });
-
-  const parsedResponse: ChatResponse = await response.json();
-  if (response.status > 299 || !response.ok) {
-      throw Error(parsedResponse.values[0].data.error || "Unknown error");
-  }
-  return parsedResponse.values[0].data;
 }
 export async function refreshIndex() : Promise<any> {
   
@@ -609,7 +858,7 @@ export async function processDoc(indexType: string, loadType : string, multiple:
   blobConnectionString : string, blobContainer : string, blobPrefix : string, blobName : string,
   s3Bucket : string, s3Key : string, s3AccessKey : string, s3SecretKey : string, s3Prefix : string,
   existingIndex : string, existingIndexNs: string, embeddingModelType: string,
-  textSplitter:string) : Promise<string> {
+  textSplitter:string, chunkSize:any, chunkOverlap:any, promptType:string, deploymentType:string) : Promise<string> {
   const response = await fetch('/processDoc', {
     method: "POST",
     headers: {
@@ -624,6 +873,10 @@ export async function processDoc(indexType: string, loadType : string, multiple:
       existingIndexNs:existingIndexNs,
       embeddingModelType:embeddingModelType,
       textSplitter:textSplitter,
+      chunkSize:chunkSize,
+      chunkOverlap:chunkOverlap,
+      promptType:promptType,
+      deploymentType:deploymentType,
       postBody: {
         values: [
           {
@@ -695,24 +948,34 @@ export async function runEvaluation(overlap: string[], chunkSize : string[], spl
   }
   return parsedResponse.values[0].data.statusUri
 }
-export async function processSummary(loadType : string, multiple: string, files: any,
-  embeddingModelType: string, chainType:string) : Promise<AskResponse> {
+export async function processSummary(indexNs: string, indexType: string, existingSummary : string, options : AskRequest) : Promise<AskResponse> {
   const response = await fetch('/processSummary', {
     method: "POST",
     headers: {
         "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      multiple: multiple,
-      loadType:loadType,
-      embeddingModelType:embeddingModelType,
-      chainType:chainType,
+      indexNs:indexNs,
+      indexType: indexType,
+      existingSummary: existingSummary,
       postBody: {
         values: [
           {
             recordId: 0,
             data: {
-              text: files,
+              text: '',
+              overrides: {
+                  promptTemplate: options.overrides?.promptTemplate,
+                  fileName: options.overrides?.fileName,
+                  topics: options.overrides?.topics,
+                  embeddingModelType: options.overrides?.embeddingModelType,
+                  chainType: options.overrides?.chainType,
+                  temperature: options.overrides?.temperature,
+                  tokenLength: options.overrides?.tokenLength,
+                  top: options.overrides?.top,
+                  deploymentType: options.overrides?.deploymentType,
+                }
+
             }
           }
         ]
@@ -720,15 +983,10 @@ export async function processSummary(loadType : string, multiple: string, files:
     })
   });
   const parsedResponse: ChatResponse = await response.json();
-  return parsedResponse.values[0].data;
-  // if (response.status > 299 || !response.ok) {
-  //     return "Error";
-  // } else {
-  //   if (parsedResponse.values[0].data.error) {
-  //     return parsedResponse.values[0].data.error;
-  //   }
-  //   return parsedResponse.values[0].data.answer;
-  // }
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse.values[0].data
 }
 export async function convertCode(inputLanguage:string, outputLanguage:string, 
   inputCode:string, modelName:string, embeddingModelType: string) : Promise<string> {
@@ -802,42 +1060,6 @@ export async function indexManagement(indexType:string, indexName:string, blobNa
   
   // return "Success";
 }
-export async function chatJsApi(question: string, history: never[], indexNs: string, indexType:string): Promise<AskResponse> { 
-  const response = {
-    answer: "Success",
-    thoughts: "No Thoughts",
-    data_points: [],
-    error : ""
-  }
-  return response
-  
-  // const pineconeClient = new PineconeClient();
-  // await pineconeClient.init({
-  //   environment: process.env.VITE_PINECONE_ENV || '',
-  //   apiKey: process.env.VITE_PINECONE_KEY || '',
-  // });
-  // const pineconeIndex = pineconeClient.Index(process.env.VITE_PINECONE_INDEX || 'oaiembed') 
-  
-  // const vectorStore = await PineconeStore.fromExistingIndex(new OpenAIEmbeddings({openAIApiKey:process.env.VITE_OPENAI_KEY}), 
-  //   {pineconeIndex,namespace:indexNs})
-
-  // const model = new OpenAI({openAIApiKey:process.env.VITE_OPENAI_KEY});
-  // const chain = ChatVectorDBQAChain.fromLLM(model, vectorStore);
-
-  // const answer = await chain.call({
-  //     question: question,
-  //     chat_history: history
-  // })
-
-  // const chatHistory = question + answer["text"];
-  // const followUpRes = await chain.call({
-  //   question: question,
-  //   chat_history: chatHistory,
-  // });
-
-
-  // return followUpRes["text"]
-}
 export async function secSearch(indexType: string,  indexName: string, question:string, top: string, 
   embeddingModelType:string): Promise<any> {
   const response = await fetch('/secSearch' , {
@@ -898,6 +1120,35 @@ export async function sqlChat(question:string, top: number, embeddingModelType: 
   }
   return parsedResponse.values[0].data
 }
+
+export async function sqlAsk(question:string, top: number, embeddingModelType: string): Promise<SqlResponse> {
+  const response = await fetch('/sqlAsk' , {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        question:question,
+        top:top,
+        embeddingModelType:embeddingModelType,
+        postBody: {
+          values: [
+            {
+              recordId: 0,
+              data: {
+                text: ''
+              }
+            }
+          ]
+        }
+      })
+  });
+  const parsedResponse: ChatResponse = await response.json();
+  if (response.status > 299 || !response.ok) {
+      throw Error("Unknown error");
+  }
+  return parsedResponse.values[0].data
+}
 export async function sqlChain(question:string, top: number, embeddingModelType:string): Promise<SqlResponse> {
     const response = await fetch('/sqlChain' , {
         method: "POST",
@@ -927,7 +1178,6 @@ export async function sqlChain(question:string, top: number, embeddingModelType:
   }
   return parsedResponse.values[0].data
 }
-
 export async function sqlVisual(question:string, top: number, embeddingModelType:string): Promise<SqlResponse> {
   const response = await fetch('/sqlVisual' , {
       method: "POST",
@@ -1003,7 +1253,6 @@ export async function getSpeechToken(): Promise<SpeechTokenResponse> {
   }
   return parsedResponse
 }
-
 export async function summarizer(options: AskRequest, requestText: string, promptType:string, promptName: string, docType: string, 
   chainType:string, embeddingModelType:string): Promise<string> {
   const response = await fetch('/summarizer' , {
@@ -1026,6 +1275,7 @@ export async function summarizer(options: AskRequest, requestText: string, promp
                   temperature: options.overrides?.temperature,
                   tokenLength: options.overrides?.tokenLength,
                   embeddingModelType : embeddingModelType,
+                  useInternet:options.overrides?.useInternet,
                 }
               }
             }
@@ -1039,45 +1289,6 @@ export async function summarizer(options: AskRequest, requestText: string, promp
     throw Error("Unknown error");
   }
   return parsedResponse.values[0].data.text
-}
-export async function summaryAndQa(indexType: string, indexNs:string, embeddingModelType: string, requestType: string, 
-  chainType:string): Promise<string> {
-  const response = await fetch('/summaryAndQa' , {
-      method: "POST",
-      headers: {
-          "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        indexType: indexType,
-        indexNs: indexNs,
-        embeddingModelType: embeddingModelType,
-        requestType: requestType,
-        chainType: chainType,
-        postBody: {
-          values: [
-            {
-              recordId: 0,
-              data: {
-                text: ''
-              }
-            }
-          ]
-        }
-    })
-  });
-
-  const parsedResponse: any = await response.json();
-  if (response.status > 299 || !response.ok) {
-    throw Error("Unknown error");
-  }
-  if (requestType === 'summary') {
-    return parsedResponse.values[0].summary
-  }
-  else if (requestType === 'qa') {
-    return parsedResponse.values[0].qa
-  }
-  else
-    return ''
 }
 export async function textAnalytics(documentText: string): Promise<string> {
   const response = await fetch('/textAnalytics' , {
@@ -1114,7 +1325,6 @@ export async function getSpeechApi(text: string): Promise<string|null> {
       }
   }).then((blob) => blob ? URL.createObjectURL(blob) : null);
 }
-
 export function getCitationFilePath(citation: string): string {
     return `/content/${citation}`;
 }

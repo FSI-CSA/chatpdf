@@ -4,13 +4,17 @@ import logging
 try:
     OpenAiKey = os.environ['OpenAiKey']
     OpenAiVersion = os.environ['OpenAiVersion']
-    OpenAiDavinci = os.environ['OpenAiDavinci']
     OpenAiChat = os.environ['OpenAiChat']
-    OpenAiService = os.environ['OpenAiService']
+    OpenAiEndPoint = os.environ['OpenAiEndPoint']
     OpenAiDocStorName = os.environ['OpenAiDocStorName']
     OpenAiDocStorKey = os.environ['OpenAiDocStorKey']
     OpenAiDocConnStr = f"DefaultEndpointsProtocol=https;AccountName={OpenAiDocStorName};AccountKey={OpenAiDocStorKey};EndpointSuffix=core.windows.net"
     OpenAiDocContainer = os.environ['OpenAiDocContainer']
+
+    if "OpenAiChat16k" in os.environ: 
+        OpenAiChat16k = os.getenv('OpenAiChat16k')
+    else:
+        OpenAiChat16k = "chat16k"
 
     if "KbIndexName" in os.environ: 
         KbIndexName = os.environ['KbIndexName']
@@ -27,6 +31,21 @@ try:
     else:
         OpenAiSummaryContainer = "summary"
 
+    if "FmpKey" in os.environ: 
+        FmpKey = os.getenv('FmpKey')
+    else:
+        FmpKey = ""
+    
+    if "SecExtractionUrl" in os.environ: 
+        SecExtractionUrl = os.getenv('SecExtractionUrl')
+    else:
+        SecExtractionUrl = ""
+
+    if "SecDocPersistUrl" in os.environ: 
+        SecDocPersistUrl = os.getenv('SecDocPersistUrl')
+    else:
+        SecDocPersistUrl = ""
+    
     if "SecDocContainer" in os.environ: 
         SecDocContainer = os.environ['SecDocContainer']
     else:
@@ -102,9 +121,20 @@ try:
     else:
         CosmosContainer = ""
 
-    OpenAiEmbedding = os.environ['OpenAiEmbedding']
-    UploadPassword = os.environ['UploadPassword'] or ''
-    AdminPassword = os.environ['AdminPassword'] or ''
+    if "OpenAiEmbedding" in os.environ: 
+        OpenAiEmbedding = os.environ['OpenAiEmbedding']
+    else:
+        OpenAiEmbedding = "embedding"
+
+    if "UploadPassword" in os.environ: 
+        UploadPassword = os.environ['UploadPassword']
+    else:
+        UploadPassword = "P@ssw0rd"
+
+    if "AdminPassword" in os.environ: 
+        AdminPassword = os.environ['AdminPassword']
+    else:
+        AdminPassword = "P@ssw0rd"
 
     if "ChromaUrl" in os.environ: 
         ChromaUrl = os.environ['ChromaUrl']
@@ -150,5 +180,31 @@ try:
         SynapsePool = os.environ['SynapsePool']
     else:
         SynapsePool = ""
+
+    if "WeatherEndPoint" in os.environ: 
+        WeatherEndPoint = os.getenv('WeatherEndPoint')
+    else:
+        WeatherEndPoint = ""
+    
+    if "WeatherHost" in os.environ: 
+        WeatherHost = os.getenv('WeatherHost')
+    else:
+        WeatherHost = ""
+
+    if "StockEndPoint" in os.environ: 
+        StockEndPoint = os.getenv('StockEndPoint')
+    else:
+        StockEndPoint = ""
+    
+    if "StockHost" in os.environ: 
+        StockHost = os.getenv('StockHost')
+    else:
+        StockHost = ""
+
+    if "RapidApiKey" in os.environ: 
+        RapidApiKey = os.getenv('RapidApiKey')
+    else:
+        RapidApiKey = ""
+
 except Exception as e:
     logging.info("Error reading environment variables: %s",e)

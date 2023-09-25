@@ -513,7 +513,7 @@ def mapper_cik_name(
         query_vars["name"] = name
     return __return_json_v4(path=path, query_vars=query_vars)
 
-def mapper_cik_company(
+def searchCik(
     apikey: str,
     ticker: str,
 ) -> typing.Optional[typing.List[typing.Dict]]:
@@ -650,7 +650,7 @@ def financial_statement(
     open(filename, "wb").write(response.content)
     logging.info(f"Saving {symbol} financial statement as {filename}.")
 
-def income_statement(
+def incomeStatement(
     apikey: str,
     symbol: str,
     period: str = "annual",
@@ -680,7 +680,7 @@ def income_statement(
     else:
         return __return_json_v3(path=path, query_vars=query_vars)
 
-def balance_sheet_statement(
+def balanceSheet(
     apikey: str,
     symbol: str,
     period: str = "annual",
@@ -710,7 +710,7 @@ def balance_sheet_statement(
     else:
         return __return_json_v3(path=path, query_vars=query_vars)
 
-def cash_flow_statement(
+def cashFlow(
     apikey: str,
     symbol: str,
     period: str = "annual",
@@ -1068,7 +1068,7 @@ def rating(apikey: str, symbol: str) -> typing.Optional[typing.List[typing.Dict]
     query_vars = {"apikey": apikey}
     return __return_json_v3(path=path, query_vars=query_vars)
 
-def historical_rating(
+def historicalRating(
     apikey: str,
     symbol: str,
     limit: int = DEFAULT_LIMIT,
@@ -1243,7 +1243,7 @@ def batch_earning_call_transcript(
     query_vars = {"apikey": apikey, "year": year}
     return __return_json_v4(path=path, query_vars=query_vars)
 
-def earning_call_transcripts_available_dates(
+def earningCallsAvailableDates(
     apikey: str, symbol: str
 ) -> typing.Optional[typing.List[typing.List]]:
     """
@@ -1254,6 +1254,76 @@ def earning_call_transcripts_available_dates(
     :return: A list of lists.
     """
     path = f"earning_call_transcript"
+    query_vars = {"apikey": apikey, "symbol": symbol}
+    return __return_json_v4(path=path, query_vars=query_vars)
+
+def financialScore(
+    apikey: str, symbol: str
+) -> typing.Optional[typing.List[typing.List]]:
+    """
+    Query FMP /score/ API.
+
+    :param apikey: Your API key.
+    :param symbol: Company ticker.
+    :return: A list of lists.
+    """
+    path = f"score"
+    query_vars = {"apikey": apikey, "symbol": symbol}
+    return __return_json_v4(path=path, query_vars=query_vars)
+
+def esgScore(
+    apikey: str, symbol: str
+) -> typing.Optional[typing.List[typing.List]]:
+    """
+    Query FMP /esg-environmental-social-governance-data/ API.
+
+    :param apikey: Your API key.
+    :param symbol: Company ticker.
+    :return: A list of lists.
+    """
+    path = f"esg-environmental-social-governance-data"
+    query_vars = {"apikey": apikey, "symbol": symbol}
+    return __return_json_v4(path=path, query_vars=query_vars)
+
+def esgRatings(
+    apikey: str, symbol: str
+) -> typing.Optional[typing.List[typing.List]]:
+    """
+    Query FMP /esg-environmental-social-governance-data-ratings/ API.
+
+    :param apikey: Your API key.
+    :param symbol: Company ticker.
+    :return: A list of lists.
+    """
+    path = f"esg-environmental-social-governance-data-ratings"
+    query_vars = {"apikey": apikey, "symbol": symbol}
+    return __return_json_v4(path=path, query_vars=query_vars)
+
+def upgradeDowngrades(
+    apikey: str, symbol: str
+) -> typing.Optional[typing.List[typing.List]]:
+    """
+    Query FMP /upgrades-downgrades-consensus/ API.
+
+    :param apikey: Your API key.
+    :param symbol: Company ticker.
+    :return: A list of lists.
+    """
+    path = f"upgrades-downgrades-consensus"
+    query_vars = {"apikey": apikey, "symbol": symbol}
+    return __return_json_v4(path=path, query_vars=query_vars)
+
+def priceTarget(
+    apikey: str, symbol: str
+) -> typing.Optional[typing.List[typing.List]]:
+    """
+    Query FMP /price-target-consensus/ API.
+
+    :param apikey: Your API key.
+    :param symbol: Company ticker.
+    :return: A list of lists.
+    """
+    path = f"price-target-consensus"
     query_vars = {"apikey": apikey, "symbol": symbol}
     return __return_json_v4(path=path, query_vars=query_vars)
 

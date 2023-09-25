@@ -58,7 +58,8 @@ Verify http://localhost:5000 to confirm the App is running locally.
       8. Cognitive Services (Language and Speech Service)
       9. SQL Server and Database (**Note** - SQL Script - northwind.sql need to run manually once database is created)
       10. **Note** - Pinecone and Redis needs to be installed manually if you want vector database support.
-      11. **AWS Integration** - None of the artifacts are deployed for AWS Integration.  Scripts are available in Deployment\aws folder
+      11. **NOTE** - Due to rapid change in the deployment model on Azure Open AI models, commenting out the code to deploy the model.  You need to manually deploy the model using the [Azure Open AI Studio](https://oai.azure.com/).  Ensure you create a gpt-3.5-turbo as deployment name "chat" and text-davinci-003 as "davinci".
+      12. **AWS Integration** - None of the artifacts are deployed for AWS Integration.  Scripts are available in Deployment\aws folder
    2. [Fork the repo](https://github.com/akshata29/chatpdf/fork)
       1. **Note - Following information need to be performed only once**
       2. Click on Actions and select "I understand my workflow, go ahead and enable them"
@@ -92,10 +93,12 @@ Verify http://localhost:5000 to confirm the App is running locally.
             "managementEndpointUrl": "https://management.core.windows.net/"
          }
       7. Copy and paste the json response from above Azure CLI to your GitHub Repository > Settings > Secrets > Add a new secret > AZURE_RBAC_CREDENTIALS
-      8. Replace pythonapi.yml file (stored in chatpdf/.github/workflows directory) with the content from [here](./Deployment/pythonapi.yml)
-      9. Trigger the workflow manually and verify the deployment is successful.
-      10. Replace backendapp.yml file (stored in chatpdf/.github/workflows directory) with the content from [here](./Deployment/backendapp.yml)
+      8. Setup AZURE_FUNCTIONAPP_NAME secret in your forked repository as the name of your Function App
+      9. Setup AZURE_WEBAPP_NAME secret in your forked repository as the name of your Azure App Service
+      10. Replace pythonapi.yml file (stored in chatpdf/.github/workflows directory) with the content from [here](./Deployment/pythonapi.yml)
       11. Trigger the workflow manually and verify the deployment is successful.
+      12. Replace backendapp.yml file (stored in chatpdf/.github/workflows directory) with the content from [here](./Deployment/backendapp.yml)
+      13. Trigger the workflow manually and verify the deployment is successful.
 
 
 **Note** - To debug and troubleshoot issues after the deployment, you can view the log in Live Metrics in application insights or enable running the Logs for the specific Azure Function.
@@ -142,10 +145,11 @@ Verify http://localhost:5000 to confirm the App is running locally.
 8. Update the configuration (Minimally you need OpenAi, one of the document store, storage account)
 9. Start the Python API by running `func host start`
 10. Open new terminal and go to /app/backend directory
-11. Copy env.example to .env file and edit the file to enter the Python localhost API and the storage configuration
-12. Run py app.py to start the backend locally (on port 5000)
-13. Open new terminal and go to /app/frontend directory
-14. Run npm run dev to start the local server (on port 5173)
+11. Run `pip install -r requirements.txt` to install all required python packages
+12. Copy env.example to .env file and edit the file to enter the Python localhost API and the storage configuration
+13. Run py app.py to start the backend locally (on port 5000)
+14. Open new terminal and go to /app/frontend directory
+15. Run npm run dev to start the local server (on port 5173)
 !5. Browse the localhost:5173 to open the web app.
 
 Once in the web app:
